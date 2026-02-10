@@ -998,6 +998,24 @@
                         </select>
                     </div>
                     <div class="filter-group">
+                        <label>Faixa Peso (JSON)</label>
+                        <select id="filterFaixaPesoJson">
+                            <option value="">Todas</option>
+                            <option value="baixo">baixo</option>
+                            <option value="medio">medio</option>
+                            <option value="alto">alto</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Delta Permanencia</label>
+                        <select id="filterDeltaPermanencia">
+                            <option value="">Todos</option>
+                            <option value="negativo">Abaixo do previsto</option>
+                            <option value="zero">No previsto</option>
+                            <option value="positivo">Acima do previsto</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label>Idoso Fragil</label>
                         <select id="filterIdosoFragil">
                             <option value="">Todos</option>
@@ -1008,6 +1026,38 @@
                     <div class="filter-group">
                         <label>Condicao Grave</label>
                         <select id="filterCondicaoGrave">
+                            <option value="">Todos</option>
+                            <option value="S">Sim</option>
+                            <option value="N">Nao</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Gerenc. At. Primaria</label>
+                        <select id="filterGerenciavelAP">
+                            <option value="">Todos</option>
+                            <option value="S">Sim</option>
+                            <option value="N">Nao</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Gerenc. Emergencia</label>
+                        <select id="filterGerenciavelEmergencia">
+                            <option value="">Todos</option>
+                            <option value="S">Sim</option>
+                            <option value="N">Nao</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Origem Readm. 30d</label>
+                        <select id="filterOrigemReadmissao30">
+                            <option value="">Todos</option>
+                            <option value="S">Sim</option>
+                            <option value="N">Nao</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Origem Recaida 30d</label>
+                        <select id="filterOrigemRecaida30">
                             <option value="">Todos</option>
                             <option value="S">Sim</option>
                             <option value="N">Nao</option>
@@ -1121,6 +1171,21 @@
                     <div class="card-title">Perm. Prevista</div>
                     <div class="card-value" id="kpiPrevista">0</div>
                     <div class="card-subtitle">dias</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Delta Medio</div>
+                    <div class="card-value" id="kpiDeltaPermanencia">0</div>
+                    <div class="card-subtitle">dias</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Ger. At. Primaria</div>
+                    <div class="card-value" id="kpiGerenciavelAP">0</div>
+                    <div class="card-subtitle">casos (S)</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Ger. Emergencia</div>
+                    <div class="card-value" id="kpiGerenciavelEmergencia">0</div>
+                    <div class="card-subtitle">casos (S)</div>
                 </div>
                     </div>
                 </section>
@@ -1245,6 +1310,24 @@
                 </section>
 
                 <section class="slide">
+                    <!-- Graficos Linha 6 (extras JSON) -->
+                    <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Delta de Permanencia (Desvio Medio Mensal)</div>
+                    <div class="chart-wrapper" style="height: 320px;"><div id="chartDeltaPermanencia" style="width:100%;height:100%;"></div></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Gerenciabilidade por Canal de Cuidado</div>
+                    <div class="chart-wrapper" style="height: 320px;"><div id="chartGerenciavel" style="width:100%;height:100%;"></div></div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Readmissao/Recaida 30 Dias por Status</div>
+                    <div class="chart-wrapper" style="height: 320px;"><div id="chartOrigem30Dias" style="width:100%;height:100%;"></div></div>
+                </div>
+                    </div>
+                </section>
+
+                <section class="slide">
                     <!-- Tabela -->
                     <div class="table-section">
                 <div class="table-header">
@@ -1272,6 +1355,12 @@
                                 <th onclick="sortTable(12)">MDC</th>
                                 <th onclick="sortTable(13)">Idoso</th>
                                 <th onclick="sortTable(14)">Grave</th>
+                                <th onclick="sortTable(15)">Faixa Peso</th>
+                                <th onclick="sortTable(16)">Delta</th>
+                                <th onclick="sortTable(17)">Ger.AP</th>
+                                <th onclick="sortTable(18)">Ger.Emerg</th>
+                                <th onclick="sortTable(19)">Readm30d</th>
+                                <th onclick="sortTable(20)">Recaida30d</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody"></tbody>
@@ -1472,6 +1561,33 @@
         function nVal(v) {
             const n = Number(v);
             return Number.isFinite(n) ? n : null;
+        }
+
+        function isCondicaoGraveRegistro(r) {
+            return r?.variaveis?.caGrave === 'S'
+                || r?.ca_grave === 'S'
+                || r?.condicaoAdquiridaGrave === 'S'
+                || r?.condicao_adquirida_grave === 'S'
+                || r?.condicao_grave === 'S';
+        }
+
+        function getDeltaPermanencia(r) {
+            const delta = nVal(r?.deltaPermanencia);
+            if (delta !== null) return delta;
+            const real = nVal(r?.permanenciaReal);
+            const prev = nVal(r?.permanenciaPrevistaNaInternacao);
+            if (real === null || prev === null) return null;
+            return real - prev;
+        }
+
+        function getFaixaPesoRegistro(r) {
+            const faixa = String(r?.faixaPeso || '').trim().toLowerCase();
+            if (faixa === 'baixo' || faixa === 'medio' || faixa === 'alto') return faixa;
+            const peso = nVal(r?.drgBrasilRefinado?.peso ?? r?.drg_peso);
+            if (peso === null) return '';
+            if (peso < 1.0) return 'baixo';
+            if (peso <= 2.0) return 'medio';
+            return 'alto';
         }
 
         function fmtNum(v, maxDigits = 1) {
@@ -1791,8 +1907,14 @@
             add('Sexo', v('filterSexo'));
             add('Faixa Etaria', v('filterIdade'));
             add('Peso', v('filterPeso'));
+            add('Faixa Peso (JSON)', v('filterFaixaPesoJson'));
+            add('Delta Permanencia', v('filterDeltaPermanencia'));
             add('Idoso Fragil', v('filterIdosoFragil'));
             add('Condicao Grave', v('filterCondicaoGrave'));
+            add('Gerenc. At. Primaria', v('filterGerenciavelAP'));
+            add('Gerenc. Emergencia', v('filterGerenciavelEmergencia'));
+            add('Origem Readm. 30d', v('filterOrigemReadmissao30'));
+            add('Origem Recaida 30d', v('filterOrigemRecaida30'));
             add('Ventilacao', v('filterVentilacao'));
             add('CID', v('filterCID'));
             add('DRG', v('filterDRG'));
@@ -2505,15 +2627,32 @@
             } catch (e) {}
 
             chartModalInstance = echarts.init(canvas);
-            const option = original.getOption ? original.getOption() : null;
-            if (option) {
+            const rawOption = original.getOption ? original.getOption() : null;
+            if (rawOption) {
+                let option = cloneOption(rawOption);
                 if (chartId === 'chartSankey' && option.series && option.series[0]) {
                     option.series[0].label = { ...(option.series[0].label || {}), fontSize: 14 };
                     option.series[0].nodeGap = Math.max(option.series[0].nodeGap || 14, 18);
                     option.series[0].nodeWidth = Math.max(option.series[0].nodeWidth || 18, 22);
                     option.series[0].layoutIterations = Math.max(option.series[0].layoutIterations || 32, 48);
                 }
-                chartModalInstance.setOption(option, { notMerge: true });
+
+                if (chartId === 'chartGerenciavel') {
+                    option = upscaleGerenciabilidadeOption(option);
+                    const anim = prepareGaugeIntroAnimation(option);
+                    chartModalInstance.setOption(anim.initial, { notMerge: true });
+                    if (anim.hasGauge) {
+                        chartModalInstance.__gaugeIntroTimer = setTimeout(() => {
+                            try {
+                                if (chartModalInstance && !chartModalInstance.isDisposed()) {
+                                    chartModalInstance.setOption({ series: anim.target.series }, { notMerge: false });
+                                }
+                            } catch (e) {}
+                        }, 120);
+                    }
+                } else {
+                    chartModalInstance.setOption(option, { notMerge: true });
+                }
                 if (chartId === 'chartFalhaEspecialidadeHero' && window.falhaHeroMeta && window.falhaHeroMeta.attach) {
                     try {
                         window.falhaHeroMeta.attach(chartModalInstance);
@@ -2535,6 +2674,9 @@
                 try { document.exitFullscreen(); } catch (e) {}
             }
             if (chartModalInstance) {
+                if (chartModalInstance.__gaugeIntroTimer) {
+                    clearTimeout(chartModalInstance.__gaugeIntroTimer);
+                }
                 if (chartModalInstance.__pulseState && chartModalInstance.__pulseState.timer) {
                     clearInterval(chartModalInstance.__pulseState.timer);
                 }
@@ -2659,6 +2801,108 @@
             return value;
         }
 
+        function isGaugeSeries(series) {
+            return String(series?.type || '') === 'gauge';
+        }
+
+        function getGaugeSeriesValue(series) {
+            const data = Array.isArray(series?.data) ? series.data : [];
+            if (!data.length) return 0;
+            const first = data[0];
+            if (first && typeof first === 'object') {
+                const n = Number(first.value);
+                return Number.isFinite(n) ? n : 0;
+            }
+            const n = Number(first);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function setGaugeSeriesValue(series, value) {
+            const data = Array.isArray(series?.data) ? [...series.data] : [];
+            if (!data.length) {
+                series.data = [{ value }];
+                return;
+            }
+            const first = data[0];
+            if (first && typeof first === 'object') data[0] = { ...first, value };
+            else data[0] = value;
+            series.data = data;
+        }
+
+        function upscaleGerenciabilidadeOption(option) {
+            const out = cloneOption(option || {});
+            if (!Array.isArray(out.series)) return out;
+
+            let gaugeIndex = 0;
+            out.series = out.series.map((series) => {
+                if (!series || !isGaugeSeries(series)) return series;
+                const center = gaugeIndex === 0 ? ['27%', '45%'] : ['73%', '45%'];
+                gaugeIndex++;
+                return {
+                    ...series,
+                    center,
+                    radius: '78%',
+                    progress: {
+                        ...(series.progress || {}),
+                        show: true,
+                        roundCap: true,
+                        width: 18,
+                        itemStyle: { ...(series.progress?.itemStyle || {}) }
+                    },
+                    axisLine: {
+                        ...(series.axisLine || {}),
+                        roundCap: true,
+                        lineStyle: { ...(series.axisLine?.lineStyle || {}), width: 18 }
+                    },
+                    splitLine: {
+                        ...(series.splitLine || {}),
+                        length: 10,
+                        lineStyle: { ...(series.splitLine?.lineStyle || {}), width: 1 }
+                    },
+                    detail: { ...(series.detail || {}), offsetCenter: [0, '38%'], fontSize: 26, fontWeight: 800 },
+                    title: { ...(series.title || {}), offsetCenter: [0, '72%'], fontSize: 12, fontWeight: 700 }
+                };
+            });
+
+            if (Array.isArray(out.graphic)) {
+                out.graphic = out.graphic.map((g, idx) => {
+                    if (!g || g.type !== 'text') return g;
+                    if (idx === 0) return { ...g, left: '9%', top: '78%' };
+                    if (idx === 1) return { ...g, left: '56%', top: '78%' };
+                    return g;
+                });
+            }
+            return out;
+        }
+
+        function prepareGaugeIntroAnimation(option) {
+            const target = cloneOption(option || {});
+            const initial = cloneOption(option || {});
+            const targetSeries = Array.isArray(target.series) ? target.series : [];
+            const initialSeries = Array.isArray(initial.series) ? initial.series : [];
+            let hasGauge = false;
+
+            for (let i = 0; i < targetSeries.length; i++) {
+                const t = targetSeries[i];
+                const z = initialSeries[i];
+                if (!t || !z || !isGaugeSeries(t) || !isGaugeSeries(z)) continue;
+                const finalValue = getGaugeSeriesValue(t);
+                setGaugeSeriesValue(z, 0);
+                setGaugeSeriesValue(t, finalValue);
+                hasGauge = true;
+            }
+
+            if (hasGauge) {
+                initial.animation = true;
+                initial.animationDuration = 500;
+                initial.animationEasing = 'cubicOut';
+                initial.animationDurationUpdate = 1300;
+                initial.animationEasingUpdate = 'cubicOut';
+            }
+
+            return { initial, target, hasGauge };
+        }
+
         function applyAxisTheme(axis) {
             const applyOne = (ax) => {
                 if (!ax) return;
@@ -2754,6 +2998,9 @@
             renderPresentationControls(chartId);
 
             if (presentationChartInstance) {
+                if (presentationChartInstance.__gaugeIntroTimer) {
+                    clearTimeout(presentationChartInstance.__gaugeIntroTimer);
+                }
                 if (presentationChartInstance.__pulseState && presentationChartInstance.__pulseState.timer) {
                     clearInterval(presentationChartInstance.__pulseState.timer);
                 }
@@ -2781,8 +3028,27 @@
             presentationChartInstance = echarts.init(chartHost);
             const src = charts[chartId];
             const option = src && src.getOption ? src.getOption() : null;
-            const themedOption = applyPresentationTheme(option);
-            if (themedOption) presentationChartInstance.setOption(themedOption, { notMerge: true });
+            let themedOption = applyPresentationTheme(option);
+            if (chartId === 'chartGerenciavel' && themedOption) {
+                themedOption = upscaleGerenciabilidadeOption(themedOption);
+            }
+            if (themedOption) {
+                if (chartId === 'chartGerenciavel') {
+                    const anim = prepareGaugeIntroAnimation(themedOption);
+                    presentationChartInstance.setOption(anim.initial, { notMerge: true });
+                    if (anim.hasGauge) {
+                        presentationChartInstance.__gaugeIntroTimer = setTimeout(() => {
+                            try {
+                                if (presentationChartInstance && !presentationChartInstance.isDisposed()) {
+                                    presentationChartInstance.setOption({ series: anim.target.series }, { notMerge: false });
+                                }
+                            } catch (e) {}
+                        }, 120);
+                    }
+                } else {
+                    presentationChartInstance.setOption(themedOption, { notMerge: true });
+                }
+            }
             if (chartId === 'chartFalhaEspecialidadeHero' && window.falhaHeroMeta && window.falhaHeroMeta.attach) {
                 try {
                     window.falhaHeroMeta.attach(presentationChartInstance);
@@ -2809,6 +3075,9 @@
             } else {
                 overlay.classList.add('hidden');
                 if (presentationChartInstance) {
+                    if (presentationChartInstance.__gaugeIntroTimer) {
+                        clearTimeout(presentationChartInstance.__gaugeIntroTimer);
+                    }
                     try { presentationChartInstance.dispose(); } catch (e) {}
                     presentationChartInstance = null;
                 }
@@ -2864,9 +3133,12 @@
                     leito: r.leito,
                     procedencia: r.procedencia,
                     reinternacao: r.reinternacao,
+                    origemReadmissao30Dias: r.origemReadmissao30Dias,
+                    origemRecaida30Dias: r.origemRecaida30Dias,
                     internadoOutrasVezes: r.internadoOutrasVezes,
                     ventilacaoMecanica: r.ventilacaoMecanica,
                     condicaoAdquiridaGrave: r.condicao_adquirida_grave,
+                    condicao_grave: r.condicao_grave,
                     hospital: {
                         codigo: r.hospital_codigo,
                         nome: r.hospital_nome,
@@ -2902,7 +3174,8 @@
                     },
                     variaveis: {
                         idosoFragil: r.idoso_fragil,
-                        caGrave: r.ca_grave
+                        caGrave: r.ca_grave,
+                        condicaoGrave: r.condicao_grave
                     },
                     estado: r.estado,
                     cidade: r.cidade,
@@ -2916,7 +3189,11 @@
                     falha_estrutura_origens: Array.isArray(r.falha_estrutura_origens) ? r.falha_estrutura_origens : [],
                     falha_estrutura_qtd: r.falha_estrutura_qtd,
                     falha_estrutura_itens: Array.isArray(r.falha_estrutura_itens) ? r.falha_estrutura_itens : [],
-                    permanencia_status: r.permanencia_status
+                    permanencia_status: r.permanencia_status,
+                    deltaPermanencia: r.deltaPermanencia,
+                    faixaPeso: r.faixaPeso,
+                    gerenciavel_atencao_primaria: r.gerenciavel_atencao_primaria,
+                    gerenciavel_emergencia: r.gerenciavel_emergencia
                 };
             }
 
@@ -3112,8 +3389,14 @@
                 sexo: document.getElementById('filterSexo').value,
                 idade: document.getElementById('filterIdade').value,
                 peso: document.getElementById('filterPeso').value,
+                faixaPesoJson: document.getElementById('filterFaixaPesoJson').value,
+                deltaPermanencia: document.getElementById('filterDeltaPermanencia').value,
                 idosoFragil: document.getElementById('filterIdosoFragil').value,
                 condicaoGrave: document.getElementById('filterCondicaoGrave').value,
+                gerenciavelAP: document.getElementById('filterGerenciavelAP').value,
+                gerenciavelEmergencia: document.getElementById('filterGerenciavelEmergencia').value,
+                origemReadmissao30: document.getElementById('filterOrigemReadmissao30').value,
+                origemRecaida30: document.getElementById('filterOrigemRecaida30').value,
                 ventilacao: document.getElementById('filterVentilacao').value,
                 cid: document.getElementById('filterCID').value.toUpperCase().trim(),
                 drg: document.getElementById('filterDRG').value.toUpperCase().trim(),
@@ -3170,7 +3453,8 @@
 
                 // Peso DRG
                 if (filtros.peso) {
-                    const peso = r.drgBrasilRefinado?.peso || 0;
+                    const peso = nVal(r.drgBrasilRefinado?.peso ?? r.drg_peso);
+                    if (peso === null) return false;
                     const faixasPeso = {
                         'baixo': peso < 1.0,
                         'medio': peso >= 1.0 && peso <= 2.0,
@@ -3179,15 +3463,35 @@
                     if (!faixasPeso[filtros.peso]) return false;
                 }
 
+                // Faixa peso (vinda do JSON)
+                if (filtros.faixaPesoJson) {
+                    if (getFaixaPesoRegistro(r) !== filtros.faixaPesoJson) return false;
+                }
+
+                // Delta de permanencia
+                if (filtros.deltaPermanencia) {
+                    const delta = getDeltaPermanencia(r);
+                    if (delta === null) return false;
+                    if (filtros.deltaPermanencia === 'negativo' && !(delta < 0)) return false;
+                    if (filtros.deltaPermanencia === 'zero' && !(Math.abs(delta) < 1e-9)) return false;
+                    if (filtros.deltaPermanencia === 'positivo' && !(delta > 0)) return false;
+                }
+
                 // Idoso fragil
                 if (filtros.idosoFragil && r.variaveis?.idosoFragil !== filtros.idosoFragil) return false;
 
                 // Condicao grave
                 if (filtros.condicaoGrave) {
-                    const grave = r.variaveis?.caGrave === 'S' || r.condicaoAdquiridaGrave === 'S';
+                    const grave = isCondicaoGraveRegistro(r);
                     if (filtros.condicaoGrave === 'S' && !grave) return false;
                     if (filtros.condicaoGrave === 'N' && grave) return false;
                 }
+
+                // Gerenciabilidade / origem 30 dias
+                if (filtros.gerenciavelAP && String(r.gerenciavel_atencao_primaria || '').toUpperCase() !== filtros.gerenciavelAP) return false;
+                if (filtros.gerenciavelEmergencia && String(r.gerenciavel_emergencia || '').toUpperCase() !== filtros.gerenciavelEmergencia) return false;
+                if (filtros.origemReadmissao30 && String(r.origemReadmissao30Dias || '').toUpperCase() !== filtros.origemReadmissao30) return false;
+                if (filtros.origemRecaida30 && String(r.origemRecaida30Dias || '').toUpperCase() !== filtros.origemRecaida30) return false;
 
                 // Ventilacao
                 if (filtros.ventilacao && r.ventilacaoMecanica !== filtros.ventilacao) return false;
@@ -3237,8 +3541,14 @@
             document.getElementById('filterSexo').value = '';
             document.getElementById('filterIdade').value = '';
             document.getElementById('filterPeso').value = '';
+            document.getElementById('filterFaixaPesoJson').value = '';
+            document.getElementById('filterDeltaPermanencia').value = '';
             document.getElementById('filterIdosoFragil').value = '';
             document.getElementById('filterCondicaoGrave').value = '';
+            document.getElementById('filterGerenciavelAP').value = '';
+            document.getElementById('filterGerenciavelEmergencia').value = '';
+            document.getElementById('filterOrigemReadmissao30').value = '';
+            document.getElementById('filterOrigemRecaida30').value = '';
             document.getElementById('filterVentilacao').value = '';
             document.getElementById('filterCID').value = '';
             document.getElementById('filterDRG').value = '';
@@ -3284,7 +3594,7 @@
 
             // Condicao grave
             document.getElementById('kpiGraves').textContent =
-                dados.filter(r => r.variaveis?.caGrave === 'S' || r.ca_grave === 'S' || r.condicaoAdquiridaGrave === 'S' || r.condicao_adquirida_grave === 'S').length;
+                dados.filter(r => isCondicaoGraveRegistro(r)).length;
 
             // Ventilacao
             document.getElementById('kpiVentilacao').textContent =
@@ -3293,6 +3603,17 @@
             // Reinternacao
             document.getElementById('kpiReinternacao').textContent =
                 dados.filter(r => r.reinternacao === 'S').length;
+
+            // Delta medio
+            const deltaVals = dados.map(r => getDeltaPermanencia(r)).filter(v => v !== null);
+            const kpiDelta = document.getElementById('kpiDeltaPermanencia');
+            if (kpiDelta) kpiDelta.textContent = deltaVals.length ? (deltaVals.reduce((a, b) => a + b, 0) / deltaVals.length).toFixed(1) : '0';
+
+            // Gerenciabilidade
+            const kpiGerAP = document.getElementById('kpiGerenciavelAP');
+            if (kpiGerAP) kpiGerAP.textContent = dados.filter(r => r.gerenciavel_atencao_primaria === 'S').length;
+            const kpiGerEmerg = document.getElementById('kpiGerenciavelEmergencia');
+            if (kpiGerEmerg) kpiGerEmerg.textContent = dados.filter(r => r.gerenciavel_emergencia === 'S').length;
         }
 
         function atualizarGraficos() {
@@ -3490,17 +3811,12 @@
                 }, { notMerge: true });
             }
 
-            // 7) Distribuicao de peso
-            const faixasPeso = { '< 0.5': 0, '0.5-1.0': 0, '1.0-1.5': 0, '1.5-2.0': 0, '2.0-3.0': 0, '> 3.0': 0 };
+            // 7) Distribuicao de peso (faixa baixo/medio/alto)
+            const faixasPeso = { baixo: 0, medio: 0, alto: 0 };
             dados.forEach(r => {
-                const peso = num(r.drgBrasilRefinado?.peso ?? r.drg_peso);
-                if (peso === null) return;
-                if (peso < 0.5) faixasPeso['< 0.5']++;
-                else if (peso < 1.0) faixasPeso['0.5-1.0']++;
-                else if (peso < 1.5) faixasPeso['1.0-1.5']++;
-                else if (peso < 2.0) faixasPeso['1.5-2.0']++;
-                else if (peso < 3.0) faixasPeso['2.0-3.0']++;
-                else faixasPeso['> 3.0']++;
+                const faixa = getFaixaPesoRegistro(r);
+                if (!faixa) return;
+                faixasPeso[faixa] = (faixasPeso[faixa] || 0) + 1;
             });
             const chartPeso = init('chartPesoDist');
             if (chartPeso) {
@@ -3513,7 +3829,7 @@
                     series: [{
                         type: 'bar',
                         barMaxWidth: 28,
-                        itemStyle: { borderRadius: [6, 6, 0, 0], color: (p) => ['#00E676', '#C6FF00', '#FFEA00', '#FF9100', '#FF1744', '#651FFF'][p.dataIndex % 6] },
+                        itemStyle: { borderRadius: [6, 6, 0, 0], color: (p) => ['#00E676', '#FFEA00', '#FF1744'][p.dataIndex % 3] },
                         data: labels.map(k => faixasPeso[k])
                     }]
                 }, { notMerge: true });
@@ -3626,7 +3942,6 @@
                                     const total = (chartSankey.__flowOutTotals && chartSankey.__flowOutTotals[source]) || outTotals[source] || 0;
                                     const perc = total ? ((value / total) * 100).toFixed(1) : '0.0';
                                     return `${source} → ${target}<br/>${value} (${perc}%)`;
-                                    return `${p.data.source} → ${p.data.target}<br/>${p.data.value}`;
                                 }
                                 return p.name;
                             }
@@ -3770,7 +4085,7 @@
                 if (!mes) return;
                 if (!ind[mes]) ind[mes] = { total: 0, grave: 0, vent: 0, rein: 0, idoso: 0 };
                 ind[mes].total++;
-                if (r.variaveis?.caGrave === 'S' || r.ca_grave === 'S' || r.condicaoAdquiridaGrave === 'S' || r.condicao_adquirida_grave === 'S') ind[mes].grave++;
+                if (isCondicaoGraveRegistro(r)) ind[mes].grave++;
                 if (r.ventilacaoMecanica === 'S') ind[mes].vent++;
                 if (r.reinternacao === 'S') ind[mes].rein++;
                 if (r.variaveis?.idosoFragil === 'S' || r.idoso_fragil === 'S') ind[mes].idoso++;
@@ -3801,7 +4116,274 @@
                 }
             }
 
-            // 13) Falhas de estrutura/processo (ranking)
+            // 13) Delta de permanencia por mes (desvio medio + tendencia)
+            const deltaMes = {};
+            dadosTotais.forEach(r => {
+                const mes = (r.dataInternacao || r.mesInternacao || '').substring(0, 7);
+                if (!mes) return;
+                const delta = getDeltaPermanencia(r);
+                if (delta === null) return;
+                if (!deltaMes[mes]) deltaMes[mes] = { s: 0, n: 0 };
+                deltaMes[mes].s += delta;
+                deltaMes[mes].n += 1;
+            });
+            const mesesDelta = Object.keys(deltaMes).sort();
+            const chartDelta = init('chartDeltaPermanencia');
+            if (chartDelta) {
+                if (!mesesDelta.length) noData(chartDelta);
+                else {
+                    const deltaMedio = mesesDelta.map(m => Number((deltaMes[m].s / deltaMes[m].n).toFixed(2)));
+                    const tendenciaTresMeses = deltaMedio.map((_, idx, arr) => {
+                        const ini = Math.max(0, idx - 2);
+                        const janela = arr.slice(ini, idx + 1);
+                        return Number((janela.reduce((acc, v) => acc + v, 0) / janela.length).toFixed(2));
+                    });
+                    chartDelta.setOption({
+                        color: ['#00acc1', '#8e24aa'],
+                        tooltip: {
+                            trigger: 'axis',
+                            formatter: (params) => {
+                                const itens = Array.isArray(params) ? params : [params];
+                                const mes = itens[0]?.axisValue || '';
+                                const linhas = [`<b>${mes}</b>`];
+                                itens.forEach(p => linhas.push(`${p.marker} ${p.seriesName}: ${Number(p.data).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`));
+                                return linhas.join('<br/>');
+                            }
+                        },
+                        legend: { bottom: 0, left: 'center', textStyle: { fontSize: 11 } },
+                        grid: { left: 48, right: 15, top: 15, bottom: 35, containLabel: true },
+                        xAxis: { type: 'category', data: mesesDelta, axisLabel: { color: '#666' } },
+                        yAxis: { type: 'value', axisLabel: { color: '#666' }, splitLine: { lineStyle: { color: '#eee' } } },
+                        dataZoom: zoomX(mesesDelta.length),
+                        series: [
+                            {
+                                name: 'Delta medio',
+                                type: 'bar',
+                                barMaxWidth: 24,
+                                data: deltaMedio,
+                                itemStyle: {
+                                    borderRadius: [4, 4, 0, 0],
+                                    color: (p) => (Number(p.value) >= 0 ? '#ef5350' : '#26a69a')
+                                },
+                                markLine: {
+                                    silent: true,
+                                    symbol: 'none',
+                                    lineStyle: { color: '#9e9e9e', type: 'dashed' },
+                                    data: [{ yAxis: 0 }]
+                                }
+                            },
+                            {
+                                name: 'Tendencia (ultimos 3 meses)',
+                                type: 'line',
+                                smooth: true,
+                                symbolSize: 6,
+                                lineStyle: { width: 2 },
+                                data: tendenciaTresMeses
+                            }
+                        ]
+                    }, { notMerge: true });
+                }
+            }
+
+            // 14) Gerenciabilidade por canal (gauges duplos)
+            const ger = { ap: { S: 0, N: 0, ND: 0 }, em: { S: 0, N: 0, ND: 0 } };
+            dados.forEach(r => {
+                const ap = r.gerenciavel_atencao_primaria;
+                const em = r.gerenciavel_emergencia;
+                ger.ap[ap === 'S' ? 'S' : ap === 'N' ? 'N' : 'ND']++;
+                ger.em[em === 'S' ? 'S' : em === 'N' ? 'N' : 'ND']++;
+            });
+            const chartGer = init('chartGerenciavel');
+            if (chartGer) {
+                const totalGer = ger.ap.S + ger.ap.N + ger.ap.ND + ger.em.S + ger.em.N + ger.em.ND;
+                if (!totalGer) noData(chartGer);
+                else {
+                    const totalAP = ger.ap.S + ger.ap.N + ger.ap.ND;
+                    const totalEM = ger.em.S + ger.em.N + ger.em.ND;
+                    const pctAP = totalAP ? Number(((ger.ap.S / totalAP) * 100).toFixed(1)) : 0;
+                    const pctEM = totalEM ? Number(((ger.em.S / totalEM) * 100).toFixed(1)) : 0;
+                    const infoAP = `Sim ${ger.ap.S}\nNao ${ger.ap.N}\nSem dado ${ger.ap.ND}`;
+                    const infoEM = `Sim ${ger.em.S}\nNao ${ger.em.N}\nSem dado ${ger.em.ND}`;
+                    chartGer.setOption({
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: (p) => {
+                                const serie = p.seriesName || '';
+                                if (serie === 'Atencao Primaria') {
+                                    return `<b>Atencao Primaria</b><br/>Gerenciavel (Sim): <b>${pctAP}%</b><br/>${infoAP}`;
+                                }
+                                if (serie === 'Emergencia') {
+                                    return `<b>Emergencia</b><br/>Gerenciavel (Sim): <b>${pctEM}%</b><br/>${infoEM}`;
+                                }
+                                return `${serie}<br/>${p.value || 0}`;
+                            }
+                        },
+                        graphic: [
+                            {
+                                type: 'text',
+                                left: '7%',
+                                top: '74%',
+                                style: { text: infoAP, fill: '#546e7a', font: '11px Segoe UI, Arial' }
+                            },
+                            {
+                                type: 'text',
+                                left: '55%',
+                                top: '74%',
+                                style: { text: infoEM, fill: '#546e7a', font: '11px Segoe UI, Arial' }
+                            }
+                        ],
+                        series: [{
+                            name: 'Atencao Primaria',
+                            type: 'gauge',
+                            center: ['24%', '44%'],
+                            radius: '58%',
+                            startAngle: 205,
+                            endAngle: -25,
+                            min: 0,
+                            max: 100,
+                            splitNumber: 5,
+                            progress: { show: true, roundCap: true, width: 14, itemStyle: { color: '#00C853' } },
+                            pointer: { show: false },
+                            axisLine: {
+                                roundCap: true,
+                                lineStyle: {
+                                    width: 14,
+                                    color: [[0.7, '#eceff1'], [1, '#dfe5ea']]
+                                }
+                            },
+                            axisTick: { show: false },
+                            splitLine: { length: 8, lineStyle: { width: 1, color: '#b0bec5' } },
+                            axisLabel: { distance: 18, color: '#78909c', fontSize: 10 },
+                            anchor: { show: false },
+                            title: { show: true, offsetCenter: [0, '72%'], color: '#1f2937', fontSize: 12, fontWeight: 700 },
+                            detail: { valueAnimation: true, offsetCenter: [0, '36%'], formatter: '{value}%', color: '#0f172a', fontSize: 22, fontWeight: 800 },
+                            data: [{ value: pctAP, name: 'Atencao Primaria' }]
+                        },
+                        {
+                            name: 'Emergencia',
+                            type: 'gauge',
+                            center: ['76%', '44%'],
+                            radius: '58%',
+                            startAngle: 205,
+                            endAngle: -25,
+                            min: 0,
+                            max: 100,
+                            splitNumber: 5,
+                            progress: { show: true, roundCap: true, width: 14, itemStyle: { color: '#2962FF' } },
+                            pointer: { show: false },
+                            axisLine: {
+                                roundCap: true,
+                                lineStyle: {
+                                    width: 14,
+                                    color: [[0.7, '#eceff1'], [1, '#dfe5ea']]
+                                }
+                            },
+                            axisTick: { show: false },
+                            splitLine: { length: 8, lineStyle: { width: 1, color: '#b0bec5' } },
+                            axisLabel: { distance: 18, color: '#78909c', fontSize: 10 },
+                            anchor: { show: false },
+                            title: { show: true, offsetCenter: [0, '72%'], color: '#1f2937', fontSize: 12, fontWeight: 700 },
+                            detail: { valueAnimation: true, offsetCenter: [0, '36%'], formatter: '{value}%', color: '#0f172a', fontSize: 22, fontWeight: 800 },
+                            data: [{ value: pctEM, name: 'Emergencia' }]
+                        }
+                        ]
+                    }, { notMerge: true });
+                }
+            }
+
+            // 15) Origem readmissao/recaida 30 dias (borboleta comparativa)
+            const origem30 = { readm: { S: 0, N: 0, ND: 0 }, recaida: { S: 0, N: 0, ND: 0 } };
+            dados.forEach(r => {
+                const readm = r.origemReadmissao30Dias;
+                const recaida = r.origemRecaida30Dias;
+                origem30.readm[readm === 'S' ? 'S' : readm === 'N' ? 'N' : 'ND']++;
+                origem30.recaida[recaida === 'S' ? 'S' : recaida === 'N' ? 'N' : 'ND']++;
+            });
+            const chartOrigem30 = init('chartOrigem30Dias');
+            if (chartOrigem30) {
+                const totalOrigem30 = origem30.readm.S + origem30.readm.N + origem30.readm.ND + origem30.recaida.S + origem30.recaida.N + origem30.recaida.ND;
+                if (!totalOrigem30) noData(chartOrigem30);
+                else {
+                    const statusComp = [
+                        { key: 'S', label: 'Sim' },
+                        { key: 'N', label: 'Nao' },
+                        { key: 'ND', label: 'Sem dado' }
+                    ];
+                    const totalReadm = origem30.readm.S + origem30.readm.N + origem30.readm.ND;
+                    const totalRecaida = origem30.recaida.S + origem30.recaida.N + origem30.recaida.ND;
+                    const pct = (v, t) => t ? Number(((v / t) * 100).toFixed(1)) : 0;
+                    const borboletaReadm = statusComp.map(s => -pct(origem30.readm[s.key], totalReadm));
+                    const borboletaRecaida = statusComp.map(s => pct(origem30.recaida[s.key], totalRecaida));
+                    chartOrigem30.setOption({
+                        color: ['#00B0FF', '#FF6D00'],
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: { type: 'shadow' },
+                            formatter: (params) => {
+                                const p = Array.isArray(params) ? params : [params];
+                                const categoria = p[0]?.axisValue || '';
+                                const readm = p.find(x => x.seriesName === 'Readmissao 30d');
+                                const recaida = p.find(x => x.seriesName === 'Recaida 30d');
+                                const vr = Math.abs(Number(readm?.value || 0));
+                                const vc = Math.abs(Number(recaida?.value || 0));
+                                return `<b>${categoria}</b><br/>Readmissao 30d: <b>${vr.toFixed(1)}%</b><br/>Recaida 30d: <b>${vc.toFixed(1)}%</b>`;
+                            }
+                        },
+                        legend: { bottom: 0, left: 'center', textStyle: { fontSize: 11 } },
+                        grid: { left: 52, right: 52, top: 16, bottom: 38, containLabel: true },
+                        xAxis: {
+                            type: 'value',
+                            min: -100,
+                            max: 100,
+                            axisLabel: {
+                                color: '#666',
+                                formatter: (v) => `${Math.abs(v)}%`
+                            },
+                            splitLine: { lineStyle: { color: '#eceff1' } }
+                        },
+                        yAxis: {
+                            type: 'category',
+                            data: statusComp.map(s => s.label),
+                            axisLabel: { color: '#455a64', fontWeight: 600 }
+                        },
+                        series: [{
+                            name: 'Readmissao 30d',
+                            type: 'bar',
+                            barMaxWidth: 24,
+                            itemStyle: { borderRadius: [10, 0, 0, 10] },
+                            label: {
+                                show: true,
+                                position: 'left',
+                                color: '#0288d1',
+                                formatter: (p) => `${Math.abs(Number(p.value || 0)).toFixed(1)}%`
+                            },
+                            data: borboletaReadm,
+                            markLine: {
+                                silent: true,
+                                symbol: 'none',
+                                lineStyle: { color: '#9e9e9e', width: 1.2 },
+                                data: [{ xAxis: 0 }]
+                            }
+                        },
+                        {
+                            name: 'Recaida 30d',
+                            type: 'bar',
+                            barMaxWidth: 24,
+                            itemStyle: { borderRadius: [0, 10, 10, 0] },
+                            label: {
+                                show: true,
+                                position: 'right',
+                                color: '#ef6c00',
+                                formatter: (p) => `${Math.abs(Number(p.value || 0)).toFixed(1)}%`
+                            },
+                            data: borboletaRecaida
+                        }
+                        ]
+                    }, { notMerge: true });
+                }
+            }
+
+            // 16) Falhas de estrutura/processo (ranking)
             const falhaMap = {};
             dados.forEach(r => {
                 const falhas = Array.isArray(r.falha_estrutura_descricoes)
@@ -3815,7 +4397,7 @@
             const falhaEntries = aplicarTop(sortedEntries(falhaMap), 'chartFalhaEstrutura');
             barH('chartFalhaEstrutura', falhaEntries, { color: '#ff5722', truncMax: 34 });
 
-            // 14) Falhas por mes / especialidade / origem
+            // 17) Falhas por mes / especialidade / origem
             const falhaMes = {};
             const falhaEsp = {};
             const falhaOrigem = {};
@@ -4424,8 +5006,13 @@
             pagina.forEach(r => {
                 const tr = document.createElement('tr');
                 const sit = r.situacao || '';
-                const peso = r.drgBrasilRefinado?.peso || 0;
-                let pesoClass = peso > 2 ? 'peso-alto' : peso >= 1 ? 'peso-medio' : 'peso-baixo';
+                const pesoNum = nVal(r.drgBrasilRefinado?.peso ?? r.drg_peso);
+                const peso = pesoNum === null ? '' : pesoNum;
+                let pesoClass = pesoNum === null ? '' : (pesoNum > 2 ? 'peso-alto' : pesoNum >= 1 ? 'peso-medio' : 'peso-baixo');
+                const faixaPeso = getFaixaPesoRegistro(r);
+                const delta = getDeltaPermanencia(r);
+                const deltaFmt = delta === null ? '' : Number(delta.toFixed(2));
+                const grave = isCondicaoGraveRegistro(r) ? 'S' : 'N';
                 const drgLabel = r.drg_codigo_nome
                     || (r.drgBrasilRefinado?.codigo && r.drgBrasilRefinado?.descricao ? `${r.drgBrasilRefinado.codigo} - ${r.drgBrasilRefinado.descricao}` : (r.drgBrasilRefinado?.codigo || r.drg_codigo || ''));
 
@@ -4444,7 +5031,13 @@
                     <td>${r.permanenciaPrevistaNaInternacao || ''}</td>
                     <td title="${r.drgBrasilRefinado?.mdc?.descricao || ''}">${r.drgBrasilRefinado?.mdc?.codigo || ''}</td>
                     <td>${r.variaveis?.idosoFragil || ''}</td>
-                    <td>${r.variaveis?.caGrave === 'S' || r.condicaoAdquiridaGrave === 'S' ? 'S' : 'N'}</td>
+                    <td>${grave}</td>
+                    <td>${faixaPeso || ''}</td>
+                    <td>${deltaFmt}</td>
+                    <td>${r.gerenciavel_atencao_primaria || ''}</td>
+                    <td>${r.gerenciavel_emergencia || ''}</td>
+                    <td>${r.origemReadmissao30Dias || ''}</td>
+                    <td>${r.origemRecaida30Dias || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -4518,7 +5111,11 @@
 
         // Exportar CSV filtrado
         function exportarCSV() {
-            const headers = ['ID','Situacao','Data Internacao','Data Alta','Hospital','Sexo','Idade','CID','DRG','Peso','Perm Real','Perm Prevista','MDC','Idoso Fragil','Condicao Grave'];
+            const headers = [
+                'ID','Situacao','Data Internacao','Data Alta','Hospital','Sexo','Idade','CID','DRG',
+                'Peso','Faixa Peso','Perm Real','Perm Prevista','Delta Permanencia','MDC',
+                'Idoso Fragil','Condicao Grave','Gerenciavel AP','Gerenciavel Emergencia','Origem Readmissao 30d','Origem Recaida 30d'
+            ];
             const rows = dadosFiltrados.map(r => [
                 r.id,
                 situacoes[r.situacao] || r.situacao,
@@ -4530,11 +5127,17 @@
                 r.cidPrincipal?.codigo,
                 r.drgBrasilRefinado?.codigo,
                 r.drgBrasilRefinado?.peso,
+                getFaixaPesoRegistro(r),
                 r.permanenciaReal,
                 r.permanenciaPrevistaNaInternacao,
+                getDeltaPermanencia(r),
                 r.drgBrasilRefinado?.mdc?.descricao,
                 r.variaveis?.idosoFragil,
-                r.variaveis?.caGrave === 'S' || r.condicaoAdquiridaGrave === 'S' ? 'S' : 'N'
+                isCondicaoGraveRegistro(r) ? 'S' : 'N',
+                r.gerenciavel_atencao_primaria,
+                r.gerenciavel_emergencia,
+                r.origemReadmissao30Dias,
+                r.origemRecaida30Dias
             ]);
 
             let csv = headers.join(';') + '\n';
@@ -4652,8 +5255,14 @@
                 add('Sexo', v('filterSexo'));
                 add('Faixa Etaria', v('filterIdade'));
                 add('Peso', v('filterPeso'));
+                add('Faixa Peso (JSON)', v('filterFaixaPesoJson'));
+                add('Delta Permanencia', v('filterDeltaPermanencia'));
                 add('Idoso Fragil', v('filterIdosoFragil'));
                 add('Condicao Grave', v('filterCondicaoGrave'));
+                add('Gerenc. At. Primaria', v('filterGerenciavelAP'));
+                add('Gerenc. Emergencia', v('filterGerenciavelEmergencia'));
+                add('Origem Readm. 30d', v('filterOrigemReadmissao30'));
+                add('Origem Recaida 30d', v('filterOrigemRecaida30'));
                 add('Ventilacao', v('filterVentilacao'));
                 add('CID', v('filterCID'));
                 add('DRG', v('filterDRG'));
@@ -4694,7 +5303,7 @@
 
                 if (!indMes[mes]) indMes[mes] = { total:0, grave:0, vent:0, rein:0, idoso:0 };
                 indMes[mes].total++;
-                if (r.variaveis?.caGrave === 'S' || r.ca_grave === 'S' || r.condicaoAdquiridaGrave === 'S' || r.condicao_adquirida_grave === 'S') indMes[mes].grave++;
+                if (isCondicaoGraveRegistro(r)) indMes[mes].grave++;
                 if (r.ventilacaoMecanica === 'S') indMes[mes].vent++;
                 if (r.reinternacao === 'S') indMes[mes].rein++;
                 if (r.variaveis?.idosoFragil === 'S' || r.idoso_fragil === 'S') indMes[mes].idoso++;
@@ -4739,13 +5348,27 @@
                 });
             });
 
+            const faixaPesoMap = contar(r => getFaixaPesoRegistro(r) || 'sem_dado');
+            const deltaClasseMap = contar(r => {
+                const delta = getDeltaPermanencia(r);
+                if (delta === null) return 'sem_dado';
+                if (Math.abs(delta) < 1e-9) return 'no_previsto';
+                if (delta < 0) return 'abaixo_previsto';
+                if (delta > 0) return 'acima_previsto';
+                return 'no_previsto';
+            });
+            const gerenciavelAPMap = contar(r => r.gerenciavel_atencao_primaria || 'sem_dado');
+            const gerenciavelEmergMap = contar(r => r.gerenciavel_emergencia || 'sem_dado');
+            const origemReadm30Map = contar(r => r.origemReadmissao30Dias || 'sem_dado');
+            const origemRecaida30Map = contar(r => r.origemRecaida30Dias || 'sem_dado');
+
             const dataHeaders = [
                 'id','situacao','situacao_label','data_internacao','data_alta','mes_internacao',
                 'hospital','estado','cidade','plano','sexo','idade','faixa_etaria',
-                'especialidade','mdc','drg_descricao','drg_peso',
-                'permanencia_real','permanencia_prevista','permanencia_status',
+                'especialidade','mdc','drg_descricao','drg_peso','faixa_peso',
+                'permanencia_real','permanencia_prevista','delta_permanencia','permanencia_status',
                 'condicao_alta','ventilacao_mecanica','reinternacao',
-                'idoso_fragil','condicao_grave',
+                'idoso_fragil','condicao_grave','gerenciavel_atencao_primaria','gerenciavel_emergencia','origem_readmissao_30dias','origem_recaida_30dias',
                 'falha_tem','falha_qtd','falha_principal','falha_descricoes','falha_origens'
             ];
 
@@ -4767,14 +5390,20 @@
                 mdc: 'MDC (Major Diagnostic Category).',
                 drg_descricao: 'Descrição do DRG.',
                 drg_peso: 'Peso relativo do DRG.',
+                faixa_peso: 'Faixa de peso (baixo/medio/alto).',
                 permanencia_real: 'Permanência real (dias).',
                 permanencia_prevista: 'Permanência prevista na internação (dias).',
+                delta_permanencia: 'Diferença entre permanência real e prevista (dias).',
                 permanencia_status: 'Status: Ideal / Próximo do ideal / Acima / Sem Dados.',
                 condicao_alta: 'Condição de alta.',
                 ventilacao_mecanica: 'Ventilação mecânica (S/N).',
                 reinternacao: 'Reinternação (S/N).',
                 idoso_fragil: 'Idoso frágil (S/N).',
                 condicao_grave: 'Condição grave (S/N).',
+                gerenciavel_atencao_primaria: 'Caso gerenciável em atenção primária (S/N).',
+                gerenciavel_emergencia: 'Caso gerenciável em emergência (S/N).',
+                origem_readmissao_30dias: 'Origem de readmissão em até 30 dias (S/N).',
+                origem_recaida_30dias: 'Origem de recaída em até 30 dias (S/N).',
                 falha_tem: 'Se houve falha de estrutura/processo (S/N).',
                 falha_qtd: 'Quantidade de falhas registradas.',
                 falha_principal: 'Principal falha (descrição).',
@@ -4810,14 +5439,20 @@
                     `mdc=${r.drgBrasilRefinado?.mdc?.descricao || r.mdc_descricao || ''}`,
                     `drg_descricao=${r.drgBrasilRefinado?.descricao || r.drg_descricao || ''}`,
                     `drg_peso=${r.drgBrasilRefinado?.peso ?? r.drg_peso ?? ''}`,
+                    `faixa_peso=${getFaixaPesoRegistro(r)}`,
                     `permanencia_real=${r.permanenciaReal ?? ''}`,
                     `permanencia_prevista=${r.permanenciaPrevistaNaInternacao ?? ''}`,
+                    `delta_permanencia=${getDeltaPermanencia(r) ?? ''}`,
                     `permanencia_status=${r.permanencia_status || ''}`,
                     `condicao_alta=${r.condicaoAlta || ''}`,
                     `ventilacao_mecanica=${r.ventilacaoMecanica || ''}`,
                     `reinternacao=${r.reinternacao || ''}`,
                     `idoso_fragil=${r.variaveis?.idosoFragil || r.idoso_fragil || ''}`,
-                    `condicao_grave=${(r.variaveis?.caGrave === 'S' || r.ca_grave === 'S' || r.condicaoAdquiridaGrave === 'S' || r.condicao_adquirida_grave === 'S') ? 'S' : 'N'}`,
+                    `condicao_grave=${isCondicaoGraveRegistro(r) ? 'S' : 'N'}`,
+                    `gerenciavel_atencao_primaria=${r.gerenciavel_atencao_primaria || ''}`,
+                    `gerenciavel_emergencia=${r.gerenciavel_emergencia || ''}`,
+                    `origem_readmissao_30dias=${r.origemReadmissao30Dias || ''}`,
+                    `origem_recaida_30dias=${r.origemRecaida30Dias || ''}`,
                     `falha_tem=${falhaTem}`,
                     `falha_qtd=${falhas.length}`,
                     `falha_principal=${r.falha_estrutura_principal || ''}`,
@@ -4853,6 +5488,12 @@
                 `Indicadores por mes: ${indMesSerie || 'N/A'}`,
                 `Falhas por mes: ${serie(falhaMes) || 'N/A'}`,
                 `Falhas por origem: ${serie(falhaOrigem) || 'N/A'}`,
+                `Faixa de peso (JSON): ${serie(faixaPesoMap) || 'N/A'}`,
+                `Delta permanencia (classe): ${serie(deltaClasseMap) || 'N/A'}`,
+                `Gerenciavel atencao primaria: ${serie(gerenciavelAPMap) || 'N/A'}`,
+                `Gerenciavel emergencia: ${serie(gerenciavelEmergMap) || 'N/A'}`,
+                `Origem readmissao 30d: ${serie(origemReadm30Map) || 'N/A'}`,
+                `Origem recaida 30d: ${serie(origemRecaida30Map) || 'N/A'}`,
                 '',
                 '=== EXPLICACAO DAS COLUNAS (DADOS DETALHADOS) ===',
                 dataHeaders.map(h => `${h}: ${colunaDesc[h] || ''}`).join('\n'),
