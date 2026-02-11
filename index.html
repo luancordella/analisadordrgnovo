@@ -4480,9 +4480,45 @@
                     falhaGlobalTopEsp[item.falha] = topEsp;
                 });
 
+                const arcadePalette = ['#19f2ff', '#2f89ff', '#6c5cff', '#b43dff', '#ff2f92', '#ff6b3d', '#ffd000', '#53ff6a', '#06e3d8', '#9ad500'];
+                const clampByte = (n) => Math.max(0, Math.min(255, Math.round(n)));
+                const hexToRgb = (hex) => {
+                    const clean = String(hex || '').replace('#', '').trim();
+                    if (clean.length !== 6) return null;
+                    const num = parseInt(clean, 16);
+                    if (!Number.isFinite(num)) return null;
+                    return {
+                        r: (num >> 16) & 255,
+                        g: (num >> 8) & 255,
+                        b: num & 255
+                    };
+                };
+                const rgbToHex = (r, g, b) => `#${[r, g, b].map(v => clampByte(v).toString(16).padStart(2, '0')).join('')}`;
+                const shiftTone = (hex, delta) => {
+                    const rgb = hexToRgb(hex);
+                    if (!rgb) return hex;
+                    return rgbToHex(rgb.r + delta, rgb.g + delta, rgb.b + delta);
+                };
+                const toRgba = (hex, alpha) => {
+                    const rgb = hexToRgb(hex);
+                    if (!rgb) return `rgba(255,255,255,${alpha})`;
+                    return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+                };
+                const arcGradient = (base, depth = 0) => {
+                    const hi = shiftTone(base, depth === 0 ? 38 : 28);
+                    const lo = shiftTone(base, depth === 0 ? -26 : -18);
+                    if (!(window.echarts && echarts.graphic && echarts.graphic.LinearGradient)) return base;
+                    return new echarts.graphic.LinearGradient(0.08, 0.05, 0.95, 0.92, [
+                        { offset: 0, color: hi },
+                        { offset: 0.58, color: base },
+                        { offset: 1, color: lo }
+                    ], false);
+                };
+
                 const dataHero = Object.entries(espInfo)
                     .filter(([esp]) => espTop.has(esp))
-                    .map(([esp, info]) => ({
+                    .sort((a, b) => (b[1].total || 0) - (a[1].total || 0))
+                    .map(([esp, info], espIdx) => ({
                         name: esp,
                         value: info.total,
                         esp,
@@ -4494,13 +4530,26 @@
                         topFalhaCount: info.topFalhaCount,
                         percentTotal: totalAllFalhas ? (info.total / totalAllFalhas) * 100 : 0,
                         topFalhas: info.entries.slice(0, 3),
+                        itemStyle: (() => {
+                            const base = arcadePalette[espIdx % arcadePalette.length];
+                            return {
+                                color: arcGradient(base, 0),
+                                borderWidth: 2.2,
+                                borderColor: toRgba(base, 0.92),
+                                shadowBlur: 22,
+                                shadowColor: toRgba(base, 0.46),
+                                opacity: 0.98
+                            };
+                        })(),
                         children: info.entries.map(([f, v], idx) => {
                             const maxV = info.entries[0]?.[1] || v || 1;
                             const minV = info.entries[info.entries.length - 1]?.[1] || v || 1;
                             const span = Math.max(1, maxV - minV);
                             const norm = (v - minV) / span;
-                            const opacity = 0.55 + 0.45 * norm;
+                            const base = arcadePalette[espIdx % arcadePalette.length];
+                            const opacity = 0.64 + 0.33 * norm;
                             const rankFactor = info.entries.length > 1 ? (1 - idx / (info.entries.length - 1)) : 1;
+                            const childTone = shiftTone(base, Math.round(-26 + (norm * 34)));
                             return ({
                             name: f,
                             value: v,
@@ -4517,8 +4566,20 @@
                             percentEsp: info.total ? (v / info.total) * 100 : 0,
                             percentTotal: totalAllFalhas ? (v / totalAllFalhas) * 100 : 0,
                             itemStyle: {
+                                color: arcGradient(childTone, 1),
                                 opacity,
-                                borderWidth: 1 + 1.2 * rankFactor
+                                borderWidth: 1.1 + 1.8 * rankFactor,
+                                borderColor: 'rgba(255,255,255,0.34)',
+                                shadowBlur: 8 + (10 * rankFactor),
+                                shadowColor: toRgba(childTone, 0.4 + (0.28 * rankFactor))
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    borderWidth: 2.4,
+                                    borderColor: 'rgba(255,255,255,0.86)',
+                                    shadowBlur: 30,
+                                    shadowColor: toRgba(childTone, 0.76)
+                                }
                             }
                         });
                         })
@@ -4601,7 +4662,13 @@
                             label: { show: false }
                         },
                         {
-                            itemStyle: { borderWidth: 2, borderColor: '#fff', gap: 2, shadowBlur: 5, shadowColor: 'rgba(0,0,0,0.2)' },
+                            itemStyle: {
+                                borderWidth: 2.4,
+                                borderColor: 'rgba(255,255,255,0.38)',
+                                gap: 4,
+                                shadowBlur: 18,
+                                shadowColor: 'rgba(17,24,39,0.42)'
+                            },
                             label: {
                                 show: true,
                                 position: 'inside',
@@ -4611,15 +4678,37 @@
                                 fontSize: 13,
                                 fontWeight: 'bold',
                                 color: '#fff',
-                                textBorderColor: '#000',
-                                textBorderWidth: 3,
+                                textBorderColor: 'rgba(0,0,0,0.68)',
+                                textBorderWidth: 2,
+                                textShadowBlur: 8,
+                                textShadowColor: 'rgba(0,0,0,0.5)',
                                 formatter: (p) => p.name.length > 18 ? p.name.slice(0, 16) + '...' : p.name
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    borderWidth: 3,
+                                    borderColor: 'rgba(255,255,255,0.9)',
+                                    shadowBlur: 34,
+                                    shadowColor: 'rgba(10,14,40,0.65)'
+                                }
                             }
                         },
                         {
-                            itemStyle: { borderWidth: 1, borderColor: '#fff', gap: 1 },
+                            itemStyle: {
+                                borderWidth: 1.2,
+                                borderColor: 'rgba(255,255,255,0.32)',
+                                gap: 2,
+                                shadowBlur: 10,
+                                shadowColor: 'rgba(10,14,40,0.3)'
+                            },
                             label: { show: false },
                             emphasis: {
+                                itemStyle: {
+                                    borderWidth: 2.2,
+                                    borderColor: 'rgba(255,255,255,0.88)',
+                                    shadowBlur: 28,
+                                    shadowColor: 'rgba(10,14,40,0.62)'
+                                },
                                 label: {
                                     show: true,
                                     position: 'inside',
@@ -4629,8 +4718,10 @@
                                     fontSize: 12,
                                     fontWeight: 'bold',
                                     color: '#fff',
-                                    textBorderColor: '#000',
+                                    textBorderColor: 'rgba(0,0,0,0.7)',
                                     textBorderWidth: 2,
+                                    textShadowBlur: 6,
+                                    textShadowColor: 'rgba(0,0,0,0.45)',
                                     formatter: (p) => p.name.length > 22 ? p.name.slice(0, 20) + '...' : p.name
                                 }
                             }
@@ -4644,13 +4735,19 @@
                         {
                             itemStyle: {
                                 borderWidth: 4,
-                                borderColor: '#fff',
+                                borderColor: 'rgba(255,255,255,0.84)',
                                 gap: 25,
-                                shadowBlur: 20,
-                                shadowColor: 'rgba(0,0,0,0.4)'
+                                shadowBlur: 30,
+                                shadowColor: 'rgba(0,0,0,0.55)'
                             },
                             label: { show: false },
                             emphasis: {
+                                itemStyle: {
+                                    borderWidth: 5,
+                                    borderColor: 'rgba(255,255,255,0.95)',
+                                    shadowBlur: 36,
+                                    shadowColor: 'rgba(0,0,0,0.7)'
+                                },
                                 label: {
                                     show: true,
                                     position: 'inside',
@@ -4660,8 +4757,10 @@
                                     fontSize: 18,
                                     fontWeight: '800',
                                     color: '#fff',
-                                    textBorderColor: '#000',
+                                    textBorderColor: 'rgba(0,0,0,0.68)',
                                     textBorderWidth: 2,
+                                    textShadowBlur: 7,
+                                    textShadowColor: 'rgba(0,0,0,0.5)',
                                     formatter: (p) => {
                                         const pct = p.data.percentEsp || 0;
                                         return pct.toFixed(1) + '%';
@@ -4774,8 +4873,27 @@
                     // 3. RENDERIZACAO INICIAL
                     // ==========================================
                     chartFalhaHero.setOption({
-                        color: ['#00E5FF', '#2979FF', '#651FFF', '#D500F9', '#FF1744', '#FF9100', '#C6FF00', '#00E676', '#1DE9B6', '#FFEA00', '#FF3D00', '#00B0FF'],
-                        tooltip: { show: true, backgroundColor: 'rgba(0,0,0,0.9)', textStyle: { color: '#fff', fontSize: 14 }, borderWidth: 0 },
+                        color: arcadePalette,
+                        backgroundColor: {
+                            type: 'radial',
+                            x: 0.5,
+                            y: 0.44,
+                            r: 0.86,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(88, 120, 255, 0.14)' },
+                                { offset: 0.58, color: 'rgba(18, 24, 56, 0.09)' },
+                                { offset: 1, color: 'rgba(8, 10, 24, 0.22)' }
+                            ]
+                        },
+                        tooltip: {
+                            show: true,
+                            backgroundColor: 'rgba(7,10,26,0.92)',
+                            borderColor: 'rgba(122,240,255,0.45)',
+                            borderWidth: 1,
+                            padding: [10, 12],
+                            extraCssText: 'box-shadow: 0 10px 24px rgba(0,0,0,0.38); border-radius: 10px;',
+                            textStyle: { color: '#e7f8ff', fontSize: 13, fontWeight: 600 }
+                        },
                         series: [{
                             type: 'sunburst',
                             radius: radiusNormal,
@@ -4791,7 +4909,19 @@
                             animationDurationUpdate: 1800,
                             animationEasingUpdate: 'cubicInOut',
                             animationDelayUpdate: (idx) => idx * 14,
-                            emphasis: { focus: 'ancestor' }
+                            emphasis: {
+                                focus: 'ancestor',
+                                itemStyle: {
+                                    shadowBlur: 42,
+                                    shadowColor: 'rgba(9,12,32,0.7)',
+                                    borderColor: 'rgba(255,255,255,0.92)'
+                                }
+                            },
+                            blur: {
+                                itemStyle: {
+                                    opacity: 0.3
+                                }
+                            }
                         }]
                     }, { notMerge: true });
 
