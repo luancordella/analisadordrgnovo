@@ -1177,16 +1177,6 @@
                     <div class="card-value" id="kpiDeltaPermanencia">0</div>
                     <div class="card-subtitle">dias</div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Ger. At. Primaria</div>
-                    <div class="card-value" id="kpiGerenciavelAP">0</div>
-                    <div class="card-subtitle">casos (S)</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">Ger. Emergencia</div>
-                    <div class="card-value" id="kpiGerenciavelEmergencia">0</div>
-                    <div class="card-subtitle">casos (S)</div>
-                </div>
                     </div>
                 </section>
 
@@ -1377,7 +1367,7 @@
     <!-- Apresentacao Fullscreen -->
     <div id="presentationOverlay" class="presentation-overlay hidden">
         <div class="presentation-header">
-            <div id="presentationTitle" class="presentation-title">Apresentacao</div>
+            <div id="presentationTitle" class="presentation-title">Apresenta&ccedil;&atilde;o</div>
             <div class="presentation-controls">
                 <button id="presentationToggleFilters" class="presentation-btn" type="button">Filtros</button>
                 <div id="presentationFilters" class="presentation-filters hidden"></div>
@@ -1386,8 +1376,6 @@
             </div>
         </div>
         <div class="presentation-body">
-            <button id="presentationPrev" class="presentation-nav prev" type="button">â€¹</button>
-            <button id="presentationNext" class="presentation-nav next" type="button">â€º</button>
             <div id="presentationCanvas" class="presentation-canvas"></div>
         </div>
     </div>
@@ -1488,6 +1476,7 @@
         // Controles por grafico (Top + Tela Cheia + Relatorio)
         // ============================
         const TOP_OPTIONS = [
+            { value: '1', label: 'Top 1' },
             { value: '3', label: 'Top 3' },
             { value: '5', label: 'Top 5' },
             { value: '10', label: 'Top 10' },
@@ -3609,11 +3598,6 @@
             const kpiDelta = document.getElementById('kpiDeltaPermanencia');
             if (kpiDelta) kpiDelta.textContent = deltaVals.length ? (deltaVals.reduce((a, b) => a + b, 0) / deltaVals.length).toFixed(1) : '0';
 
-            // Gerenciabilidade
-            const kpiGerAP = document.getElementById('kpiGerenciavelAP');
-            if (kpiGerAP) kpiGerAP.textContent = dados.filter(r => r.gerenciavel_atencao_primaria === 'S').length;
-            const kpiGerEmerg = document.getElementById('kpiGerenciavelEmergencia');
-            if (kpiGerEmerg) kpiGerEmerg.textContent = dados.filter(r => r.gerenciavel_emergencia === 'S').length;
         }
 
         function atualizarGraficos() {
@@ -3941,7 +3925,7 @@
                                     const value = Number(p.data.value) || 0;
                                     const total = (chartSankey.__flowOutTotals && chartSankey.__flowOutTotals[source]) || outTotals[source] || 0;
                                     const perc = total ? ((value / total) * 100).toFixed(1) : '0.0';
-                                    return `${source} â†’ ${target}<br/>${value} (${perc}%)`;
+                                    return `${source} &rarr; ${target}<br/>${value} (${perc}%)`;
                                 }
                                 return p.name;
                             }
@@ -4492,7 +4476,7 @@
                 const falhaGlobalTopEsp = {};
                 falhaGlobalEntries.forEach((item, idx) => {
                     falhaGlobalRank[item.falha] = idx + 1;
-                    const topEsp = Object.entries(item.espMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    const topEsp = Object.entries(item.espMap).sort((a, b) => b[1] - a[1]);
                     falhaGlobalTopEsp[item.falha] = topEsp;
                 });
 
@@ -4569,15 +4553,15 @@
                                 <div class="falha-hero-info-title" style="font-size:15px; color: #D500F9; margin-bottom:5px;">${d.falha}</div>
                                 <div class="falha-hero-info-sub" style="margin-bottom: 15px; color: #777; border-bottom:2px solid #D500F9; padding-bottom:5px; display:inline-block;">Detalhamento da Falha</div>
                                 <div class="falha-hero-info-grid">
-                                    ${rowIco('ðŸ¥', 'Especialidade', d.esp || 'N/A')}
-                                    ${rowIco('ðŸ”¢', 'Ocorrencias', d.value, true)}
-                                    ${rowIco('ðŸ“Š', '% na Especialidade', d.percentEsp.toFixed(1) + '%')}
-                                    ${rowIco('ðŸŒ', '% no Total Geral', d.percentTotal.toFixed(1) + '%')}
-                                    ${rowIco('ðŸ†', 'Rank (Esp)', '#' + (d.rankInEsp || '-'))}
-                                    ${rowIco('ðŸ†', 'Rank (Global)', '#' + (d.rankGlobal || '-'))}
-                                    ${rowIco('ðŸ¥', 'Especialidades Atingidas', d.espCountGlobal || 0)}
+                                    ${rowIco('&#127973;', 'Especialidade', d.esp || 'N/A')}
+                                    ${rowIco('&#128290;', 'Ocorr&ecirc;ncias', d.value, true)}
+                                    ${rowIco('&#128202;', '% na Especialidade', d.percentEsp.toFixed(1) + '%')}
+                                    ${rowIco('&#127757;', '% no Total Geral', d.percentTotal.toFixed(1) + '%')}
+                                    ${rowIco('&#127942;', 'Rank (Esp)', '#' + (d.rankInEsp || '-'))}
+                                    ${rowIco('&#127942;', 'Rank (Global)', '#' + (d.rankGlobal || '-'))}
+                                    ${rowIco('&#127973;', 'Especialidades Atingidas', d.espCountGlobal || 0)}
                                     <div class="falha-hero-info-row" style="border:none; padding-top:10px; margin-top:5px;">
-                                        <span style="color: #555; font-size: 11px; font-weight:600; width:100%;">ðŸ“Œ TOP ESPECIALIDADES (ESTA FALHA)</span>
+                                        <span style="color: #555; font-size: 11px; font-weight:600; width:100%;">&#128204; ESPECIALIDADES ATINGIDAS (ESTA FALHA)</span>
                                     </div>
                                     <div style="display:flex; flex-wrap:wrap; gap:4px; width:100%;">${topEspList}</div>
                                 </div>
@@ -4591,16 +4575,16 @@
 
                             const html = `
                                 <div class="falha-hero-info-title" style="font-size:15px; color: #2979FF; margin-bottom:5px;">${d.esp}</div>
-                                <div class="falha-hero-info-sub" style="margin-bottom: 15px; color: #777; border-bottom:2px solid #2979FF; padding-bottom:5px; display:inline-block;">Visao Geral</div>
+                                <div class="falha-hero-info-sub" style="margin-bottom: 15px; color: #777; border-bottom:2px solid #2979FF; padding-bottom:5px; display:inline-block;">Vis&atilde;o Geral</div>
                                 <div class="falha-hero-info-grid">
-                                    ${rowIco('ðŸš¨', 'Total de Falhas', d.espTotal, true)}
-                                    ${rowIco('ðŸ“Š', '% do Total Geral', d.percentTotal.toFixed(1) + '%')}
-                                    ${rowIco('ðŸ“‰', 'Falhas Distintas', d.distinctFalhasEsp)}
-                                    ${rowIco('âš–ï¸', 'Media por Falha', media)}
-                                    ${rowIco('ðŸ”¥', 'Falha Principal', d.topFalha || 'N/A')}
-                                    ${rowIco('ðŸ”¥', 'Ocorrencias (Top)', d.topFalhaCount || 0)}
+                                    ${rowIco('&#128680;', 'Total de Falhas', d.espTotal, true)}
+                                    ${rowIco('&#128202;', '% do Total Geral', d.percentTotal.toFixed(1) + '%')}
+                                    ${rowIco('&#128201;', 'Falhas Distintas', d.distinctFalhasEsp)}
+                                    ${rowIco('&#9878;&#65039;', 'M&eacute;dia por Falha', media)}
+                                    ${rowIco('&#128293;', 'Falha Principal', d.topFalha || 'N/A')}
+                                    ${rowIco('&#128293;', 'Ocorr&ecirc;ncias (Top)', d.topFalhaCount || 0)}
                                     <div class="falha-hero-info-row" style="border:none; padding-top:10px; margin-top:5px;">
-                                        <span style="color: #555; font-size: 11px; font-weight:600; width:100%;">ðŸ“Œ TOP 3 FALHAS</span>
+                                        <span style="color: #555; font-size: 11px; font-weight:600; width:100%;">&#128204; TOP 3 FALHAS</span>
                                     </div>
                                     <div style="display:flex; flex-wrap:wrap; gap:4px; width:100%;">${topFalhasList}</div>
                                 </div>
@@ -5331,40 +5315,40 @@
             ];
 
             const colunaDesc = {
-                id: 'ID do registro de internaÃ§Ã£o.',
-                situacao: 'CÃ³digo da situaÃ§Ã£o (1 Admissional, 2 ProrrogaÃ§Ã£o, 3 Alta, 4 AutorizaÃ§Ã£o).',
-                situacao_label: 'SituaÃ§Ã£o em texto.',
-                data_internacao: 'Data de internaÃ§Ã£o (YYYY-MM-DD).',
+                id: 'ID do registro de internacao.',
+                situacao: 'Codigo da situacao (1 Admissional, 2 Prorrogacao, 3 Alta, 4 Autorizacao).',
+                situacao_label: 'Situacao em texto.',
+                data_internacao: 'Data de internacao (YYYY-MM-DD).',
                 data_alta: 'Data de alta (YYYY-MM-DD).',
-                mes_internacao: 'MÃªs da internaÃ§Ã£o (YYYY-MM).',
-                hospital: 'Hospital de internaÃ§Ã£o.',
+                mes_internacao: 'Mes da internacao (YYYY-MM).',
+                hospital: 'Hospital de internacao.',
                 estado: 'UF do paciente.',
                 cidade: 'Cidade do paciente.',
-                plano: 'Plano do beneficiÃ¡rio.',
-                sexo: 'Sexo do beneficiÃ¡rio.',
+                plano: 'Plano do beneficiario.',
+                sexo: 'Sexo do beneficiario.',
                 idade: 'Idade em anos.',
-                faixa_etaria: 'Faixa etÃ¡ria (0-17,18-40,41-60,61-80,80+).',
-                especialidade: 'Especialidade do mÃ©dico responsÃ¡vel.',
+                faixa_etaria: 'Faixa etaria (0-17,18-40,41-60,61-80,80+).',
+                especialidade: 'Especialidade do medico responsavel.',
                 mdc: 'MDC (Major Diagnostic Category).',
-                drg_descricao: 'DescriÃ§Ã£o do DRG.',
+                drg_descricao: 'Descricao do DRG.',
                 drg_peso: 'Peso relativo do DRG.',
                 faixa_peso: 'Faixa de peso (baixo/medio/alto).',
-                permanencia_real: 'PermanÃªncia real (dias).',
-                permanencia_prevista: 'PermanÃªncia prevista na internaÃ§Ã£o (dias).',
-                delta_permanencia: 'DiferenÃ§a entre permanÃªncia real e prevista (dias).',
-                permanencia_status: 'Status: Ideal / PrÃ³ximo do ideal / Acima / Sem Dados.',
-                condicao_alta: 'CondiÃ§Ã£o de alta.',
-                ventilacao_mecanica: 'VentilaÃ§Ã£o mecÃ¢nica (S/N).',
-                reinternacao: 'ReinternaÃ§Ã£o (S/N).',
-                idoso_fragil: 'Idoso frÃ¡gil (S/N).',
-                condicao_grave: 'CondiÃ§Ã£o grave (S/N).',
-                gerenciavel_atencao_primaria: 'Caso gerenciÃ¡vel em atenÃ§Ã£o primÃ¡ria (S/N).',
-                gerenciavel_emergencia: 'Caso gerenciÃ¡vel em emergÃªncia (S/N).',
-                origem_readmissao_30dias: 'Origem de readmissÃ£o em atÃ© 30 dias (S/N).',
-                origem_recaida_30dias: 'Origem de recaÃ­da em atÃ© 30 dias (S/N).',
+                permanencia_real: 'Permanencia real (dias).',
+                permanencia_prevista: 'Permanencia prevista na internacao (dias).',
+                delta_permanencia: 'Diferenca entre permanencia real e prevista (dias).',
+                permanencia_status: 'Status: Ideal / Proximo do ideal / Acima / Sem Dados.',
+                condicao_alta: 'Condicao de alta.',
+                ventilacao_mecanica: 'Ventilacao mecanica (S/N).',
+                reinternacao: 'Reinternacao (S/N).',
+                idoso_fragil: 'Idoso fragil (S/N).',
+                condicao_grave: 'Condicao grave (S/N).',
+                gerenciavel_atencao_primaria: 'Caso gerenciavel em atencao primaria (S/N).',
+                gerenciavel_emergencia: 'Caso gerenciavel em emergencia (S/N).',
+                origem_readmissao_30dias: 'Origem de readmissao em ate 30 dias (S/N).',
+                origem_recaida_30dias: 'Origem de recaida em ate 30 dias (S/N).',
                 falha_tem: 'Se houve falha de estrutura/processo (S/N).',
                 falha_qtd: 'Quantidade de falhas registradas.',
-                falha_principal: 'Principal falha (descriÃ§Ã£o).',
+                falha_principal: 'Principal falha (descricao).',
                 falha_descricoes: 'Lista de falhas (separadas por |).',
                 falha_origens: 'Origem das falhas (A-Ambos, H-Hospital, R-Rede/Operadora).'
             };
