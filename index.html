@@ -162,6 +162,14 @@
             padding: 6px 8px;
         }
 
+        .range-inline {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .range-inline input { min-width: 0; }
+
         .filter-group select:focus,
         .filter-group input:focus {
             outline: none;
@@ -989,6 +997,21 @@
                         </select>
                     </div>
                     <div class="filter-group">
+                        <label>Idade precisa em</label>
+                        <select id="filterIdadePrecisaoUnidade">
+                            <option value="">Nao aplicar</option>
+                            <option value="dias">Dias</option>
+                            <option value="meses">Meses</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Intervalo idade precisa</label>
+                        <div class="range-inline">
+                            <input type="number" id="filterIdadePrecisaoMin" min="0" step="1" placeholder="Min">
+                            <input type="number" id="filterIdadePrecisaoMax" min="0" step="1" placeholder="Max">
+                        </div>
+                    </div>
+                    <div class="filter-group">
                         <label>Peso DRG</label>
                         <select id="filterPeso">
                             <option value="">Todos</option>
@@ -1579,6 +1602,58 @@
             return 'alto';
         }
 
+        function parseIsoDateOnly(value) {
+            if (!value) return null;
+            const raw = String(value).trim();
+            if (!raw) return null;
+            const datePart = raw.split('T')[0].split(' ')[0];
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+            if (!m) return null;
+            const y = Number(m[1]);
+            const mo = Number(m[2]);
+            const d = Number(m[3]);
+            const dt = new Date(Date.UTC(y, mo - 1, d));
+            return Number.isNaN(dt.getTime()) ? null : dt;
+        }
+
+        function getIdadeDiasRegistro(r) {
+            const diasDireto = nVal(r?.beneficiario?.idadeEmDias ?? r?.beneficiario_idade_dias);
+            if (diasDireto !== null) return Math.max(0, Math.floor(diasDireto));
+
+            const mesesDireto = nVal(r?.beneficiario?.idadeEmMeses ?? r?.beneficiario_idade_meses);
+            if (mesesDireto !== null) return Math.max(0, Math.floor(mesesDireto * 30.4375));
+
+            const anos = nVal(r?.beneficiario?.idadeEmAnos ?? r?.beneficiario_idade_anos);
+            if (anos !== null) return Math.max(0, Math.floor(anos * 365.25));
+
+            const nascimento = parseIsoDateOnly(r?.beneficiario?.dataNascimento ?? r?.beneficiario_data_nascimento);
+            const referencia = parseIsoDateOnly(
+                r?.dataInternacao
+                ?? r?.dataAlta
+                ?? r?.dataCadastro
+                ?? r?.data_cadastro
+                ?? r?.data_ultima_alteracao
+            );
+            if (!nascimento || !referencia) return null;
+            const dias = Math.floor((referencia.getTime() - nascimento.getTime()) / 86400000);
+            return dias >= 0 ? dias : null;
+        }
+
+        function getIdadeMesesRegistro(r) {
+            const mesesDireto = nVal(r?.beneficiario?.idadeEmMeses ?? r?.beneficiario_idade_meses);
+            if (mesesDireto !== null) return Math.max(0, Math.floor(mesesDireto));
+
+            const diasDireto = nVal(r?.beneficiario?.idadeEmDias ?? r?.beneficiario_idade_dias);
+            if (diasDireto !== null) return Math.max(0, Math.floor(diasDireto / 30.4375));
+
+            const anos = nVal(r?.beneficiario?.idadeEmAnos ?? r?.beneficiario_idade_anos);
+            if (anos !== null) return Math.max(0, Math.floor(anos * 12));
+
+            const dias = getIdadeDiasRegistro(r);
+            if (dias === null) return null;
+            return Math.max(0, Math.floor(dias / 30.4375));
+        }
+
         function fmtNum(v, maxDigits = 1) {
             const n = Number(v);
             if (!Number.isFinite(n)) return '0';
@@ -1895,6 +1970,13 @@
             const falha = vmulti('filterFalhaEstrutura'); if (falha.length) add('Falha Estrutura', falha.join(', '));
             add('Sexo', v('filterSexo'));
             add('Faixa Etaria', v('filterIdade'));
+            const idadePrecisaoUnidade = v('filterIdadePrecisaoUnidade');
+            const idadePrecisaoMin = v('filterIdadePrecisaoMin');
+            const idadePrecisaoMax = v('filterIdadePrecisaoMax');
+            if (idadePrecisaoUnidade && (idadePrecisaoMin || idadePrecisaoMax)) {
+                const unidade = idadePrecisaoUnidade === 'dias' ? 'dias' : 'meses';
+                add('Idade precisa', `${idadePrecisaoMin || '-'} a ${idadePrecisaoMax || '-'} ${unidade}`);
+            }
             add('Peso', v('filterPeso'));
             add('Faixa Peso (JSON)', v('filterFaixaPesoJson'));
             add('Delta Permanencia', v('filterDeltaPermanencia'));
@@ -3139,6 +3221,7 @@
                         sexo: r.beneficiario_sexo,
                         idadeEmAnos: r.beneficiario_idade_anos,
                         idadeEmMeses: r.beneficiario_idade_meses,
+                        idadeEmDias: r.beneficiario_idade_dias,
                         dataNascimento: r.beneficiario_data_nascimento
                     },
                     medico: (r.medico_responsavel_nome || r.medico_responsavel_crm || r.medico_responsavel_especialidade) ? [{
@@ -3377,6 +3460,9 @@
                 falhaEstrutura: multiValores('filterFalhaEstrutura'),
                 sexo: document.getElementById('filterSexo').value,
                 idade: document.getElementById('filterIdade').value,
+                idadePrecisaoUnidade: document.getElementById('filterIdadePrecisaoUnidade').value,
+                idadePrecisaoMin: document.getElementById('filterIdadePrecisaoMin').value.trim(),
+                idadePrecisaoMax: document.getElementById('filterIdadePrecisaoMax').value.trim(),
                 peso: document.getElementById('filterPeso').value,
                 faixaPesoJson: document.getElementById('filterFaixaPesoJson').value,
                 deltaPermanencia: document.getElementById('filterDeltaPermanencia').value,
@@ -3394,6 +3480,9 @@
                 cidade: document.getElementById('filterCidade').value.toUpperCase().trim(),
                 plano: document.getElementById('filterPlano').value
             };
+
+            const idadePrecisaoMin = filtros.idadePrecisaoMin === '' ? null : nVal(filtros.idadePrecisaoMin);
+            const idadePrecisaoMax = filtros.idadePrecisaoMax === '' ? null : nVal(filtros.idadePrecisaoMax);
 
             dadosFiltrados = dadosOriginais.filter(r => {
                 // Data
@@ -3438,6 +3527,16 @@
                         '80+': idade > 80
                     };
                     if (!faixas[filtros.idade]) return false;
+                }
+
+                // Idade precisa (dias/meses)
+                if (filtros.idadePrecisaoUnidade && (idadePrecisaoMin !== null || idadePrecisaoMax !== null)) {
+                    const idadeValor = filtros.idadePrecisaoUnidade === 'dias'
+                        ? getIdadeDiasRegistro(r)
+                        : getIdadeMesesRegistro(r);
+                    if (idadeValor === null) return false;
+                    if (idadePrecisaoMin !== null && idadeValor < idadePrecisaoMin) return false;
+                    if (idadePrecisaoMax !== null && idadeValor > idadePrecisaoMax) return false;
                 }
 
                 // Peso DRG
@@ -3529,6 +3628,9 @@
             limparMulti('filterFalhaEstrutura');
             document.getElementById('filterSexo').value = '';
             document.getElementById('filterIdade').value = '';
+            document.getElementById('filterIdadePrecisaoUnidade').value = '';
+            document.getElementById('filterIdadePrecisaoMin').value = '';
+            document.getElementById('filterIdadePrecisaoMax').value = '';
             document.getElementById('filterPeso').value = '';
             document.getElementById('filterFaixaPesoJson').value = '';
             document.getElementById('filterDeltaPermanencia').value = '';
@@ -5326,6 +5428,13 @@
                 const falha = vmulti('filterFalhaEstrutura'); if (falha.length) add('Falha Estrutura', falha.join(', '));
                 add('Sexo', v('filterSexo'));
                 add('Faixa Etaria', v('filterIdade'));
+                const idadePrecisaoUnidade = v('filterIdadePrecisaoUnidade');
+                const idadePrecisaoMin = v('filterIdadePrecisaoMin');
+                const idadePrecisaoMax = v('filterIdadePrecisaoMax');
+                if (idadePrecisaoUnidade && (idadePrecisaoMin || idadePrecisaoMax)) {
+                    const unidade = idadePrecisaoUnidade === 'dias' ? 'dias' : 'meses';
+                    add('Idade precisa', `${idadePrecisaoMin || '-'} a ${idadePrecisaoMax || '-'} ${unidade}`);
+                }
                 add('Peso', v('filterPeso'));
                 add('Faixa Peso (JSON)', v('filterFaixaPesoJson'));
                 add('Delta Permanencia', v('filterDeltaPermanencia'));
